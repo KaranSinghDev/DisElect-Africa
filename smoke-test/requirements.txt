@@ -1,3 +1,2 @@
 google-genai>=1.0.0
 python-dotenv>=1.0.0
-# requests is not required: the Ollama backend uses stdlib urllib only.

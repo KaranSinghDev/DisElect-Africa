@@ -4,6 +4,10 @@ results/raw/
 # Smoke-test raw outputs & secrets (responsible-release: keep private)
 smoke-test/smoke_results.csv
 smoke-test/.env
+# Per-rater judge labels — each teammate generates their own (committing one makes
+# label_judge.py skip rows, defeating the blind pass). The aggregate
+# judge_validation_report.md is committed as a sample.
+smoke-test/human_labels.csv
 
 # Python
 __pycache__/
