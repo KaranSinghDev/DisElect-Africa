@@ -8,7 +8,11 @@ Supports two backends: **Ollama** (local, no API key) and **Gemini** (cloud API)
 
 ## What's here
 
-- `run_smoke.py` — runner + LLM-as-judge (Ollama + Gemini backends).
+- `run_smoke_ollama.py` — runner + LLM-as-judge for the **Ollama** path (local, no API key). Takes
+  `--model` / `--judge-model` flags. (Also retains a `--backend gemini` option for parity.)
+- `run_smoke_gemini.py` — runner + LLM-as-judge for the **Gemini** path (cloud API). Configured via the
+  `MODELS_UNDER_TEST` / `JUDGE_MODEL` constants at the top of the file.
+- `run_smoke.py` — convenience alias, identical to `run_smoke_gemini.py`.
 - `list_models.py` — prints the exact Gemini model strings your key can call.
 - `judge_template.txt` — DisElect's verbatim 4-class judge prompt.
 - `smoke_prompts_south_africa.csv` — 10-prompt subset (3 News, 3 Reply, 2 MP, 2 benign).
@@ -49,19 +53,19 @@ pip install -r requirements.txt
 ### 5. Run the smoke test
 
 ```bash
-python run_smoke.py --backend ollama
+python run_smoke_ollama.py
 ```
 
 To use a specific model:
 
 ```bash
-python run_smoke.py --backend ollama --model llama3.2
+python run_smoke_ollama.py --model llama3.2
 ```
 
 To use a different model as the judge (e.g. a larger model):
 
 ```bash
-python run_smoke.py --backend ollama --model llama3.2 --judge-model llama3.1
+python run_smoke_ollama.py --model llama3.2 --judge-model llama3.1
 ```
 
 ### Environment variables (optional)
@@ -103,13 +107,13 @@ cp .env.example .env
 python list_models.py
 ```
 
-Edit the `MODELS_UNDER_TEST` and `JUDGE_MODEL` constants in `run_smoke.py` if the defaults differ from
-what your key can access.
+Edit the `MODELS_UNDER_TEST` and `JUDGE_MODEL` constants in `run_smoke_gemini.py` if the defaults differ
+from what your key can access.
 
 ### 5. Run
 
 ```bash
-python run_smoke.py --backend gemini
+python run_smoke_gemini.py
 ```
 
 ### Quota / billing note
