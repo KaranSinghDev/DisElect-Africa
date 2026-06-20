@@ -1,6 +1,10 @@
 # Generated model outputs
 results/raw/
 
+# Smoke-test raw outputs & secrets (responsible-release: keep private)
+smoke-test/smoke_results.csv
+smoke-test/.env
+
 # Python
 __pycache__/
 *.pyc
