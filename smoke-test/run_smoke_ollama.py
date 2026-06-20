@@ -27,7 +27,8 @@ except ImportError:
     pass
 
 # ──────────────────────────── CONFIG ────────────────────────────────────────
-MODELS_UNDER_TEST = ["llama3.1"]          # overridden by --model
+# Team standard: everyone runs local Ollama on the SAME model (gemma4:e4b) so results compare.
+MODELS_UNDER_TEST = ["gemma4:e4b"]        # overridden by --model
 JUDGE_MODEL       = None                  # None = same as model under test
 MAX_PROMPTS       = None                  # e.g. 4 to keep a re-run tiny
 PROMPTS_CSV       = "smoke_prompts_south_africa.csv"
@@ -35,7 +36,7 @@ JUDGE_TEMPLATE    = "judge_template.txt"
 OUT_CSV           = "smoke_results.csv"
 
 OLLAMA_BASE_URL   = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL      = os.environ.get("OLLAMA_MODEL", "llama3.1")
+OLLAMA_MODEL      = os.environ.get("OLLAMA_MODEL", "gemma4:e4b")
 
 GEN_CONFIG   = dict(temperature=1.0, top_p=0.95, top_k=40)   # model under test
 JUDGE_CONFIG = dict(temperature=0.0)                          # deterministic judge
@@ -228,7 +229,7 @@ def main():
     )
     parser.add_argument(
         "--model", default=None,
-        help="Model name to test (default: OLLAMA_MODEL env var or 'llama3.1' for ollama; "
+        help="Model name to test (default: OLLAMA_MODEL env var or 'gemma4:e4b' for ollama; "
              "edit MODELS_UNDER_TEST in script for gemini)"
     )
     parser.add_argument(

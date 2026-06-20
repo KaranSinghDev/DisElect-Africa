@@ -22,9 +22,10 @@ from pathlib import Path
 GEMINI_MODELS_UNDER_TEST = ["gemini-3.1-flash-lite"]
 GEMINI_JUDGE_MODEL       = "gemini-3.1-flash-lite"
 # Ollama (run `ollama list` to see what you've pulled)
+# Team standard: everyone runs local Ollama on the SAME model so results are comparable.
 OLLAMA_BASE_URL          = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODELS_UNDER_TEST = ["llama3.2"]
-OLLAMA_JUDGE_MODEL       = "llama3.2"
+OLLAMA_MODELS_UNDER_TEST = ["gemma4:e4b"]
+OLLAMA_JUDGE_MODEL       = "gemma4:e4b"
 
 PROMPTS_CSV   = "smoke_prompts_south_africa.csv"
 JUDGE_TEMPLATE = "judge_template.txt"

@@ -17,56 +17,61 @@ Two backends are supported: **Ollama** (local, free, no API key — the default)
 - `smoke_prompts_south_africa.csv` — the 10-prompt subset (3 News, 3 Reply, 2 MP, 2 benign).
 - `requirements.txt`, `.env.example`.
 
-## Setup (one time)
+## Quick start — local Ollama (team default)
 
-**1. Get a Gemini API key.** Go to **https://aistudio.google.com/apikey**, sign in with a Google account,
-click **Create API key**. The free tier is plenty for the smoke test (~30 calls). Copy the key.
+**The whole team runs the same local model, `gemma4:e4b`, via Ollama** so everyone's results are directly
+comparable. No API key, no billing, no quota.
 
-**2. Install Python 3.10+ and the deps.** In a terminal, from this `smoke-test/` folder:
+```bash
+# 1. Install Ollama:  https://ollama.com/download   (or:  brew install ollama)
+# 2. Start the server (the desktop app, or in a terminal — leave it running):
+ollama serve
+# 3. Pull the team-standard model (in another terminal):
+ollama pull gemma4:e4b
+# 4. Run the smoke test (from this smoke-test/ folder):
+python run_smoke.py
+```
+
+That's it — `run_smoke.py` defaults to `--backend ollama` and the `gemma4:e4b` model, so **no flags are
+needed**. You'll see one line per prompt, then a summary, and a `smoke_results.csv` file.
+
+- The Ollama path uses only the Python standard library — **no `pip install` required**. (A virtualenv is
+  optional: `python3 -m venv .venv && source .venv/bin/activate`.)
+- If you see `ERROR:ollama_unreachable`, the server isn't running or the model isn't pulled (`ollama list`).
+- Local models have no platform safety filter, so the `blocked` class won't fire on this backend (expected).
+- One-off with a different local model: `python run_smoke.py` after editing the `OLLAMA_*` CONFIG block, or
+  `python run_smoke_ollama.py --model <name>`.
+
+## Optional — Gemini cloud backend
+
+Only if you want to compare against a hosted model. Needs an API key and is subject to free-tier quota.
+
+**1. Get a key** at **https://aistudio.google.com/apikey** (sign in → Create API key; free tier ≈ 30 calls).
+
+**2. Install the SDK** (from this `smoke-test/` folder):
 ```bash
 python3 -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-**3. Add your key.** Copy the example and paste your key into the new file:
+**3. Add your key:**
 ```bash
 cp .env.example .env
 # open .env and set:  GEMINI_API_KEY=AIza...your_key...
 ```
 (`.env` is git-ignored — never commit your key.)
 
-## Run — Option A: Ollama (local, free, no quota) [default]
-No API key, no billing, no quota. Needs the Ollama app running and a model pulled.
-```bash
-# 1. Install Ollama (https://ollama.com/download) — or:  brew install ollama
-# 2. Start the server (a desktop app, or in a terminal):
-ollama serve            # leave running; or just open the Ollama app
-# 3. Pull a small model (in another terminal):
-ollama pull llama3.2
-# 4. (optional) match the model name in run_smoke.py CONFIG (OLLAMA_MODELS_UNDER_TEST / OLLAMA_JUDGE_MODEL)
-# 5. Run the smoke test:
-python run_smoke.py --backend ollama
-```
-The Ollama path uses only the Python standard library — you don't need `pip install` for it. If you see
-`ERROR:ollama_unreachable`, the server isn't running or the model isn't pulled. Note: local models have no
-platform safety filter, so the `blocked` class won't fire on this backend (expected).
-
-## Run — Option B: Gemini API
-
 **4. Confirm the model names** (they change between Gemini releases):
 ```bash
 python list_models.py
 ```
-Pick a Flash and a Pro string from the list. If they differ from the defaults, edit the `CONFIG` block at
-the top of `run_smoke.py` (`GEMINI_MODELS_UNDER_TEST` and `GEMINI_JUDGE_MODEL`). Default is
-`gemini-3.1-flash-lite`.
+If they differ from the default `gemini-3.1-flash-lite`, edit the `CONFIG` block at the top of `run_smoke.py`
+(`GEMINI_MODELS_UNDER_TEST` and `GEMINI_JUDGE_MODEL`).
 
-**5. Run the smoke test (Gemini):**
+**5. Run against Gemini:**
 ```bash
 python run_smoke.py --backend gemini
 ```
-(`--backend` defaults to `ollama`, so pass `gemini` explicitly here.) You'll see a line per prompt, then a
-summary, and a `smoke_results.csv` file.
 
 ## What "passing" looks like (acceptance criteria)
 - Every one of the 10 prompts returns either a response or a logged block/error (no crashes).
@@ -83,8 +88,9 @@ summary, and a `smoke_results.csv` file.
   `PROMPT_BLOCKED`, `NO_TEXT:SAFETY`) and the empty response is judged `refuse` by default. Note in your
   write-up that platform-level blocking and model-level refusal are different mechanisms.
 - **Rate limits.** Free tier is fine here; the script sleeps 0.5s between calls. At scale, add backoff.
-- **Self-preference bias.** Gemini judging Gemini is acceptable for a smoke test; for the real run, validate
-  the judge against ~30–50 hand labels (spec §4.2) and consider a non-Gemini judge as a robustness check.
+- **Self-preference bias.** A model judging itself (e.g. `gemma4:e4b` judging `gemma4:e4b`) is acceptable for
+  a smoke test; for the real run, validate the judge against ~30–50 hand labels (spec §4.2) and consider a
+  different judge model as a robustness check.
 
 ## Quota / billing (read this if you got 429 RESOURCE_EXHAUSTED)
 Google cut free-tier limits hard in Dec 2025: **Flash free tier is ~20 requests/day**, and **preview models
