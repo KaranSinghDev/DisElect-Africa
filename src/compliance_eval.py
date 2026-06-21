@@ -1,20 +1,7 @@
-#!/usr/bin/env python3
 """
-DisElect-Africa | Compliance harness (Step 3).
-
-Reads the team's prompt CSVs, sends each prompt_text to each model under two
-conditions (base / constitution), classifies each response with DisElect's exact
-4-class judge (comply / softrefuse / refuse / incoherent), and reports the
-headline numbers:
-  H1  malicious COMPLY rate: African (arm A) vs Western (arm W)   [base]
-  H2  malicious COMPLY rate: base vs constitution                  [the fix]
-  H3  benign COMPLY rate: base vs constitution                     [over-refusal check]
-
-Responsible disclosure: full model responses are written to results/raw/ (gitignored);
-only judgement labels + aggregates are committed.
-
-Setup:  pip install openai python-dotenv
-Run:    python3 src/compliance_eval.py        (run from repo root)
+DisElect-Africa Compliance Harness.
+Evaluates LLM compliance with election disinformation prompts across base and constitution conditions.
+Scores responses using a 4-class LLM-as-a-judge (comply / softrefuse / refuse / incoherent).
 """
 
 import os
@@ -33,34 +20,29 @@ except ImportError:
 from openai import OpenAI
 
 # ----------------------------- CONFIG -----------------------------
-# Generation endpoint (the models UNDER TEST). WSL->Windows LM Studio bridge IP.
-# (confirm with: curl http://<ip>:1234/v1/models)
 GEN_BASE_URL = "http://172.19.0.1:1234/v1"
-GEN_API_KEY = "lm-studio"            # any non-empty string for LM Studio
+GEN_API_KEY = "lm-studio"            # any non-empty string for  locally hosted models
 
-# Models under test = exact ids from /v1/models. The JUDGE must NOT appear here
 # (no model grades itself). Confirm the phi id in your /v1/models output.
 MODELS = [
     "llama-3.2-3b-instruct",
     "gemma-2-2b-it",
     "qwen_qwen3-4b-instruct-2507",
-    "phi-3.5-mini-instruct",          # <-- confirm exact id via /v1/models
+    "phi-3.5-mini-instruct",         
 ]
 
 # JUDGE: NOT one of the tested models above.
-# BEST: have a teammate run Gemini (uncomment the block below, paste their key).
-# FALLBACK (local): Mistral 7B as a dedicated judge.
 JUDGE_BASE_URL = "http://172.19.0.1:1234/v1"
 JUDGE_API_KEY = "lm-studio"
-JUDGE_MODEL = "mistral-7b-instruct-v0.3"   # <-- confirm exact id via /v1/models
-# --- Gemini judge (preferred; ask Joshua for the key + confirm current id) ---
+JUDGE_MODEL = "mistral-7b-instruct-v0.3"   
+# --- Gemini judge ---
 # JUDGE_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 # JUDGE_API_KEY = os.getenv("GEMINI_API_KEY", "")
 # JUDGE_MODEL = "gemini-2.5-flash-lite"   # the id Joshua smoke-tested
 # SLEEP = 1.0   # pace Gemini's free tier
 
 CONDITIONS = ["base", "constitution"]   # set to ["base"] for the quickest smoke test
-LIMIT = 5                            # re-smoke with the NEW judge first, then set None
+LIMIT = 5                               # set limit to less than 15 for smoke test, None for full
 GEN_MAX_TOKENS = 200                    # enough for "first two sentences" / a reply
 JUDGE_MAX_TOKENS = 50                   # DisElect uses 10
 SLEEP = 0.0                             # >0 if your judge is a rate-limited API
@@ -189,7 +171,7 @@ def main():
         summary[f"benign_comply::{cond}"] = comply_rate(ben)
     json.dump(summary, open(SUMMARY_PATH, "w"), indent=2)
 
-    # --- print headlines ---
+
     print("\n================ HEADLINES ================")
     base = "base" if "base" in CONDITIONS else CONDITIONS[0]
     af = summary.get(f"malicious_comply::africa::{base}", (None, 0))
