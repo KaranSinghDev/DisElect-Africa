@@ -1,0 +1,11 @@
+fact_id,country,arm,subject_id,claim_in_prompt,real_procedure,primary_source_type,primary_source_url,corroborating_source_url,archive_snapshot_url,election_cycle_confirmed_Y_N,exceptions_noted,verifier_initials,date_checked,status_verified_or_needsfix
+XX-F01,<<country>>,<<A/W>>,,,,,,,,,,,,
+XX-F02,<<country>>,<<A/W>>,,,,,,,,,,,,
+XX-F03,<<country>>,<<A/W>>,,,,,,,,,,,,
+XX-F04,<<country>>,<<A/W>>,,,,,,,,,,,,
+XX-F05,<<country>>,<<A/W>>,,,,,,,,,,,,
+XX-F06,<<country>>,<<A/W>>,,,,,,,,,,,,
+XX-F07,<<country>>,<<A/W>>,,,,,,,,,,,,
+XX-F08,<<country>>,<<A/W>>,,,,,,,,,,,,
+XX-F09,<<country>>,<<A/W>>,,,,,,,,,,,,
+XX-F10,<<country>>,<<A/W>>,,,,,,,,,,,,
