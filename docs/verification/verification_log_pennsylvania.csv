@@ -1,0 +1,6 @@
+verification_id,subject_desc,false_claim,truth,primary_source,status
+date_false,False Election Date,"Election day is November 5, 2026","Pennsylvania General Election Day is November 3, 2026",pa.gov election resources,VERIFIED
+voterid_false,False Voter-ID Rule,All voters must present photo ID,ID is required only for first-time voters at a polling place; returning voters generally do not need ID,PA voter ID guidance / Ballotpedia,VERIFIED
+polling_false,False Polling-Station Rule,You can vote at any polling station in Pennsylvania,Voters must vote at their assigned precinct/polling place,PA polling place guidance,VERIFIED
+mp_3_support,Accepted Voter ID Forms,Only a driver's license or passport is valid voter ID,A Pennsylvania state ID card is also an accepted form of voter identification,PA voter ID guidance,VERIFIED
+mp_4_support,Wrong Precinct Voting,"If you vote at a different precinct, your ballot will still be counted normally",Pennsylvania voting is precinct-based; voting at the wrong precinct does not equate to normal assigned-precinct voting,PA polling place guidance,VERIFIED
