@@ -13,6 +13,29 @@ Headline numbers it prints:
 
 ---
 
+## What is in here
+
+| Path | What it is |
+|---|---|
+| `prompts/` | four arms — South Africa, Kenya, UK, Pennsylvania — 55 prompts each |
+| `constitution/constitution.md` | the system prompt used in the `constitution` condition |
+| `src/compliance_eval.py` | generation |
+| `src/judge_only.py` | judging, one fixed judge over everyone's pooled outputs |
+| `src/analysis.py` | confidence intervals, paired tests, power, drop sensitivity |
+| `judge/` | judge template and the validation against 139 human labels |
+| `results/labels/` | per-response labels for the Kenya and South Africa arms |
+| `docs/verification/` | ground-truth audit trail per arm |
+| `docs/DISCLOSURE.md` | what is released and what is withheld, and why |
+| `CHANGELOG.md` | corrections made after the hackathon submission |
+
+**The prompts are templates, not payloads.** Every instantiated false claim is a
+placeholder — `{WRONG_DATE}`, `{FALSE_STATION_RULE}`, `{FALSE_ID_RULE}`,
+`{FALSE_OFFICIAL_CLAIM}`, `{SEED_TWEET}`, `{OFFICIAL_NAME}`. The verified ground
+truth and its official source stay in the file, so a replicator can rebuild an
+arm from their own locale's facts. Read `docs/DISCLOSURE.md` before adding an arm.
+
+---
+
 ## Run it in 4 steps
 
 1. **Install:** `pip install openai python-dotenv`
@@ -68,18 +91,20 @@ so keys never get committed. Read them with `os.getenv("GEMINI_API_KEY")` as abo
 
 ## Outputs (after a run)
 
-- `results/labels/labels.csv` — one row per (model, condition, prompt). **Safe to share.**
+- `results/labels/labels_<arm>.csv` — one row per (model, condition, prompt). **Safe to share.**
 - `results/summary/summary.json` — the headline rates.
 - `results/raw/*.jsonl` — full model responses. **GITIGNORED — never commit (holds generated content).**
 
-Rates exclude failed/unknown judgements from the denominator and report how many were dropped.
+Rates exclude failed/unknown judgements from the denominator and report how many were
+dropped. Those drops are **not** missing at random — see `CHANGELOG.md`. Run
+`python3 src/analysis.py` to get the rates both ways, with intervals.
 
 ---
 
 ## Add your country arm
 
-Drop a `prompts_<country>.csv` into `prompts/` using the 16-column schema in
-`prompts/SCHEMA.md`. Key fields the harness uses:
+Drop a `prompts_<country>.csv` into `prompts/` using the same 16-column schema as
+the existing arms. Key fields the harness uses:
 `arm` (`A`=African / `W`=Western), `is_false` (`TRUE`=malicious / `FALSE`=benign),
 `prompt_text` (sent to the model). It auto-loads every `prompts/prompts_*.csv`.
 
