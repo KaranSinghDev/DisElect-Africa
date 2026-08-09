@@ -1,7 +1,20 @@
+#!/usr/bin/env python3
 """
-DisElect-Africa Compliance Harness.
-Evaluates LLM compliance with election disinformation prompts across base and constitution conditions.
-Scores responses using a 4-class LLM-as-a-judge (comply / softrefuse / refuse / incoherent).
+DisElect-Africa | Compliance harness (Step 3).
+
+Reads the team's prompt CSVs, sends each prompt_text to each model under two
+conditions (base / constitution), classifies each response with DisElect's exact
+4-class judge (comply / softrefuse / refuse / incoherent), and reports the
+headline numbers:
+  H1  malicious COMPLY rate: African (arm A) vs Western (arm W)   [base]
+  H2  malicious COMPLY rate: base vs constitution                  [the fix]
+  H3  benign COMPLY rate: base vs constitution                     [over-refusal check]
+
+Responsible disclosure: full model responses are written to results/raw/ (gitignored);
+only judgement labels + aggregates are committed.
+
+Setup:  pip install openai python-dotenv
+Run:    python3 src/compliance_eval.py        (run from repo root)
 """
 
 import os
@@ -9,6 +22,7 @@ import csv
 import glob
 import json
 import time
+import subprocess
 import datetime
 
 try:
@@ -21,31 +35,25 @@ from openai import OpenAI
 
 # ----------------------------- CONFIG -----------------------------
 GEN_BASE_URL = "http://172.19.0.1:1234/v1"
-GEN_API_KEY = "lm-studio"            # any non-empty string for  locally hosted models
-
-# (no model grades itself). Confirm the phi id in your /v1/models output.
+GEN_API_KEY = "lm-studio"
 MODELS = [
-    "llama-3.2-3b-instruct",
+   
     "gemma-2-2b-it",
     "qwen_qwen3-4b-instruct-2507",
-    "phi-3.5-mini-instruct",         
+    "phi-3.5-mini-instruct",
+    "mistral-7b-instruct-v0.3"
 ]
 
-# JUDGE: NOT one of the tested models above.
 JUDGE_BASE_URL = "http://172.19.0.1:1234/v1"
 JUDGE_API_KEY = "lm-studio"
-JUDGE_MODEL = "mistral-7b-instruct-v0.3"   
-# --- Gemini judge ---
-# JUDGE_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
-# JUDGE_API_KEY = os.getenv("GEMINI_API_KEY", "")
-# JUDGE_MODEL = "gemini-2.5-flash-lite"   # the id Joshua smoke-tested
-# SLEEP = 1.0   # pace Gemini's free tier
+JUDGE_MODEL = "llama-3.1-8b-instruct"
 
-CONDITIONS = ["base", "constitution"]   # set to ["base"] for the quickest smoke test
-LIMIT = 5                               # set limit to less than 15 for smoke test, None for full
-GEN_MAX_TOKENS = 200                    # enough for "first two sentences" / a reply
-JUDGE_MAX_TOKENS = 50                   # DisElect uses 10
-SLEEP = 0.0                             # >0 if your judge is a rate-limited API
+CONDITIONS = ["base", "constitution"]
+LIMIT = None
+GEN_MAX_TOKENS = 100
+JUDGE_MAX_TOKENS = 38
+SLEEP = 0.0
+JUDGE_INLINE = False
 
 PROMPTS_GLOB = "prompts/prompts_*.csv"
 CONSTITUTION_PATH = "constitution/constitution.md"
@@ -84,6 +92,30 @@ def map_judgement(text):
     return j or "unknown"
 
 
+# ---- LM Studio runtime control (full GPU offload + clean swap between models) ----
+GPU_CONTROL = True
+GPU_CTX = 4096
+LMS_BIN = "/mnt/c/Users/karan/.lmstudio/bin/lms.exe"  # <-- paste your exact path
+
+def _lms(*args):
+    if not GPU_CONTROL:
+        return
+    try:
+        subprocess.run([LMS_BIN, *args], check=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as e:
+        print(f"  ({LMS_BIN} {' '.join(args)} skipped: {e})")
+
+def load_on_gpu(model_id):
+    """Eject whatever is loaded, then load ONE model with maximum GPU offload."""
+    _lms("unload", "--all")
+    # --gpu max: offload as many layers as fit on the GPU; --identifier: force the
+    # API id to equal model_id so the OpenAI call below targets exactly this model.
+    _lms("load", model_id, "--gpu", "max",
+         "--context-length", str(GPU_CTX), "--identifier", model_id, "-y")
+    print(f"  [loaded {model_id} on GPU]")
+
+
 def main():
     gen = OpenAI(base_url=GEN_BASE_URL, api_key=GEN_API_KEY)
     judge = OpenAI(base_url=JUDGE_BASE_URL, api_key=JUDGE_API_KEY)
@@ -106,6 +138,7 @@ def main():
 
     label_rows = []
     for model in MODELS:
+        load_on_gpu(model)            # eject previous model, load this one (full GPU offload)
         for cond in CONDITIONS:
             sys_msg = constitution if cond == "constitution" else None
             for i, p in enumerate(prompts, 1):
@@ -120,17 +153,20 @@ def main():
                 except Exception as e:
                     out, label = f"[GEN_ERROR: {e}]", "error"
                 else:
-                    # --- judge ---
-                    jp = judge_tmpl.replace("{INPUT_PROMPT}", p["prompt_text"]).replace(
-                        "{OUTPUT_RESPONSE}", out)
-                    try:
-                        jr = judge.chat.completions.create(
-                            model=JUDGE_MODEL,
-                            messages=[{"role": "user", "content": jp}],
-                            max_tokens=JUDGE_MAX_TOKENS, temperature=0, timeout=120)
-                        label = map_judgement(jr.choices[0].message.content)
-                    except Exception as e:
-                        label = f"judge_error"
+                    if not JUDGE_INLINE:
+                        label = "ungraded"          # judge later with judge_only.py
+                    else:
+                        # --- judge ---
+                        jp = judge_tmpl.replace("{INPUT_PROMPT}", p["prompt_text"]).replace(
+                            "{OUTPUT_RESPONSE}", out)
+                        try:
+                            jr = judge.chat.completions.create(
+                                model=JUDGE_MODEL,
+                                messages=[{"role": "user", "content": jp}],
+                                max_tokens=JUDGE_MAX_TOKENS, temperature=0, timeout=120)
+                            label = map_judgement(jr.choices[0].message.content)
+                        except Exception as e:
+                            label = f"judge_error"
                 # --- record (raw gitignored; label committed) ---
                 raw_f.write(json.dumps({"model": model, "condition": cond,
                                         "prompt_id": p["prompt_id"], "response": out,
@@ -171,7 +207,7 @@ def main():
         summary[f"benign_comply::{cond}"] = comply_rate(ben)
     json.dump(summary, open(SUMMARY_PATH, "w"), indent=2)
 
-
+    # --- print headlines ---
     print("\n================ HEADLINES ================")
     base = "base" if "base" in CONDITIONS else CONDITIONS[0]
     af = summary.get(f"malicious_comply::africa::{base}", (None, 0))
